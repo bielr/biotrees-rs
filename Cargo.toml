@@ -4,3 +4,6 @@ version = "0.1.0"
 authors = ["xcv <<>>"]
 
 [dependencies]
+lazy_static = "1.2.0"
+cached = "0.8.0"
+rayon = "1.0.3"

@@ -15,3 +15,14 @@ pub fn factorial<T>(n: T) -> T
     let one = 1_u32.into();
     (one .. n+one).product::<T>()
 }
+
+macro_rules! map_indices {
+    ( $var:ident in $range:expr, $($var_n:ident in $range_n:expr),+ => $body:expr ) => {
+        $range.flat_map(move |$var|
+            map_indices!( $($var_n in $range_n),* => $body ))
+    };
+
+    ( $var:ident in $range:expr => $body:expr ) => {
+        $range.map(move |$var| $body)
+    };
+}

@@ -1,27 +1,27 @@
-use std::rc::Rc;
+use std::sync::Arc;
 use std::cmp::Ordering;
 
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Phylo<T> {
     Leaf(T),
-    Node(Rc<[Phylo<T>]>)
+    Node(Arc<[Phylo<T>]>)
 }
 
 pub use self::Phylo::{Leaf, Node};
-pub mod balance;
-pub mod generator;
 
 #[macro_export]
 macro_rules! make_phylo {
     ( ( $( $children:tt ),+ ) ) => {
         $crate::phylo::Phylo::shared_node(
-            std::rc::Rc::new([ $(make_phylo!($children)),* ]))
+            std::sync::Arc::new([ $(make_phylo!($children)),* ]))
     };
     ( $label:expr ) => {
         $crate::phylo::Phylo::leaf_with($label)
     };
 }
+
+pub mod newick;
 
 
 impl<T> Phylo<T> {
@@ -29,12 +29,12 @@ impl<T> Phylo<T> {
         Leaf(label)
     }
 
-    pub fn shared_node(children: Rc<[Self]>) -> Self {
+    pub fn shared_node(children: Arc<[Self]>) -> Self {
         Node(children)
     }
 
     pub fn node(children: Vec<Self>) -> Self {
-        Self::shared_node(Rc::from(children.into_boxed_slice()))
+        Self::shared_node(Arc::from(children.into_boxed_slice()))
     }
 
     pub fn is_leaf(&self) -> bool {
@@ -75,7 +75,7 @@ impl<T> Phylo<T> {
         }
     }
 
-    pub fn isomorphic(&self, other: &Self) -> bool {
+    pub fn isomorphic<U>(&self, other: &Phylo<U>) -> bool {
         match (self, other) {
             (Leaf(..), Leaf(..)) => true,
             (Leaf(..), Node(..)) => false,
@@ -114,7 +114,7 @@ impl<T> Phylo<T> {
     }
 
     pub fn binary_fold<R, F>(&self, leaf_value: R, mut f: F) -> R
-        where F: FnMut(R, R) -> R,
+        where F: FnMut(&Self, R, R) -> R,
               R: Copy {
 
         match self {
@@ -123,23 +123,31 @@ impl<T> Phylo<T> {
             Node(ref ts) => {
                 assert_eq!(ts.len(), 2);
 
-                let r0 = ts[0].binary_fold(leaf_value, |t1,t2| f(t1,t2));
-                let r1 = ts[1].binary_fold(leaf_value, |t1,t2| f(t1,t2));
-                f(r0, r1)
+                let r0 = {
+                    let f_ref = &mut f as &mut FnMut(&Self, R, R) -> R;
+                    ts[0].binary_fold(leaf_value, f_ref)
+                };
+                let r1 = {
+                    let f_ref = &mut f as &mut FnMut(&Self, R, R) -> R;
+                    ts[1].binary_fold(leaf_value, f_ref)
+                };
+                f(self, r0, r1)
             }
         }
     }
 
 
     pub fn fold<R, F>(&self, leaf_value: R, f: F) -> R
-        where F: Fn(&mut Iterator<Item=R>) -> R,
+        where F: Fn(&Self, &mut Iterator<Item=R>) -> R,
               R: Copy {
 
         match self {
             Leaf(..)     => leaf_value,
             Node(ref ts) => {
-                let mut it = ts.iter().map(|t| t.fold(leaf_value, |iter| f(iter)));
-                f(&mut it)
+                let f_ref = &f as &Fn(&Self, &mut Iterator<Item=R>) -> R;
+
+                let mut it = ts.iter().map(|t| t.fold(leaf_value, f_ref));
+                f(self, &mut it)
             }
         }
     }
