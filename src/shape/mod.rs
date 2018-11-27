@@ -1,4 +1,5 @@
 use std::fmt;
+use lazy_static::lazy_static;
 
 pub use phylo::{Phylo, Leaf, Node};
 
@@ -21,6 +22,10 @@ macro_rules! make_shape {
         $crate::shape::Shape::shared_node(
             std::sync::Arc::new([ $(make_shape!($children)),* ]))
     };
+}
+
+lazy_static! {
+    static ref CHERRY: Shape = make_shape!( (*, *) );
 }
 
 impl fmt::Debug for Tip {

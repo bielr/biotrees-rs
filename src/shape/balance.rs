@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 
 use phylo::{Phylo, Leaf, Node};
-use shape::Shape;
+use shape::{CHERRY, Shape};
 use util::{binom2, factorial};
 
 
@@ -70,6 +70,18 @@ impl<T: Eq> Phylo<T> {
 }
 
 impl<T> Phylo<T> {
+    pub fn count_cherries(&self) -> u32 {
+        let cherry = &CHERRY;
+
+        self.fold(0, |t, iter| {
+            if cherry.isomorphic(t) {
+                1
+            } else {
+                iter.sum()
+            }
+        })
+    }
+
     pub fn sackin_index(&self) -> u32 {
         let (sackin, _) = self.fold((0u32, 1u32), |_, iter| {
             let (sum_sackin, kappa) =

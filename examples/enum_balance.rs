@@ -64,24 +64,38 @@ fn depth_var<T>(t: &Phylo<T>) -> f64 {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
+    let binary = false;
     let nleaves = args[1].parse().unwrap();
 
-    println!("newick\tcolless\tsackin\tcophenetic\tqi\tsym_desc_half\tsym_desc\tdepth_avg\tdepth_var\tautomorphisms");
 
-    for t in shape_gen::all_binary_trees(nleaves).iter() {
-        println!("{};\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            t.to_newick(),
-            t.binary_colless_index(),
-            t.sackin_index(),
-            t.cophenetic_index(),
-            t.binary_quartet_index(),
-            sym_desc_half(t),
-            sym_desc(t),
-            depth_avg(t),
-            depth_var(t),
-            t.count_automorphisms()
-        );
+    if binary {
+        println!("newick\tcolless\tsackin\tcophenetic\tqi\tcherries\tautomorphisms");
 
-        assert_eq!(t.quartet_index(Some(&[0,0,0,1,1])), t.binary_quartet_index());
+        for t in shape_gen::all_binary_trees(nleaves).iter() {
+            println!("{};\t{}\t{}\t{}\t{}\t{}\t{}",
+                t.to_newick(),
+                t.binary_colless_index(),
+                t.sackin_index(),
+                t.cophenetic_index(),
+                t.quartet_index(None),
+                t.count_cherries(),
+                t.count_automorphisms()
+            );
+
+            assert_eq!(t.quartet_index(Some(&[0,0,0,1,1])), t.binary_quartet_index());
+        }
+    } else {
+        println!("newick\tsackin\tcophenetic\tqi\tcherries\tautomorphisms");
+
+        for t in shape_gen::all_trees(nleaves).iter() {
+            println!("{};\t{}\t{}\t{}\t{}\t{}",
+                t.to_newick(),
+                t.sackin_index(),
+                t.cophenetic_index(),
+                t.quartet_index(None),
+                t.count_cherries(),
+                t.count_automorphisms()
+            );
+        }
     }
 }
